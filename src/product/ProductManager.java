@@ -1,8 +1,9 @@
 package product;
 
 import java.util.ArrayList;
+import java.util.List;
 
-public class ProductManager {
+public class ProductManager implements Searchable {
 
 	private ArrayList<Product> products = new ArrayList<>();
 
@@ -27,8 +28,21 @@ public class ProductManager {
 		}
 		return null;
 	}
-	
+
 	public ArrayList<Product> getProducts() {
-	    return products;
+		return products;
+	}
+
+	@Override
+	public List<Product> search(String keyword) {
+		List<Product> result = new ArrayList<>();
+
+		for (Product p : products) {
+			if (p.getName().contains(keyword)) {
+				result.add(p);
+			}
+		}
+		
+		return result;
 	}
 }
