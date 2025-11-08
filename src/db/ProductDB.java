@@ -21,9 +21,9 @@ public class ProductDB {
 				while (true) {
 
 					System.out.println("--メニュー--\n"
-							+ "1:商品追加\n"
-							+ "2:商品情報更新\n"
-							+ "3:商品削除\n"
+							+ "1:商品の登録\n"
+							+ "2:商品の価格と在庫を更新\n"
+							+ "3:商品の削除（カテゴリーID指定）\n"
 							+ "0:終了\n");
 					System.out.println("メニューから操作を選択してください");
 
@@ -57,13 +57,13 @@ public class ProductDB {
 
 	private static void insertProduct(Connection conn, Scanner sc) {
 
-		System.out.println("商品名を入力してください");
+		System.out.println("商品名を入力してください：");
 		String name = sc.nextLine();
-		System.out.println("価格を入力してください");
+		System.out.println("価格を入力してください：");
 		int price = sc.nextInt();
-		System.out.println("在庫数を入力してください");
+		System.out.println("在庫数を入力してください：");
 		int stock = sc.nextInt();
-		System.out.println("カテゴリーIDを入力してください");
+		System.out.println("カテゴリーIDを入力してください：");
 		int categoryId = sc.nextInt();
 
 		if (!validateProductInput(name, price, stock)) {
@@ -80,7 +80,9 @@ public class ProductDB {
 			pstmt.setInt(4, categoryId);
 
 			int rows = pstmt.executeUpdate();
-			System.out.println(rows + "件の商品を追加しました");
+			System.out.println("登録成功件数" + rows + "件");
+			System.out.println("登録内容：\n" +
+					"商品名：" + name + ", 価格：" + price + "在庫数：" + stock + "カテゴリーID：" + categoryId);
 			sc.nextLine();
 
 		} catch (SQLException e) {
@@ -91,11 +93,11 @@ public class ProductDB {
 
 	private static void updateProduct(Connection conn, Scanner sc) {
 
-		System.out.println("更新する商品IDを入力してください");
+		System.out.println("商品IDを入力してください");
 		int id = sc.nextInt();
-		System.out.println("新しい価格を入力してください");
+		System.out.println("価格を入力してください");
 		int newPrice = sc.nextInt();
-		System.out.println("新しい在庫数を入力してください");
+		System.out.println("在庫数を入力してください");
 		int newStock = sc.nextInt();
 
 		if (newPrice <= 0 || newStock < 0) {
@@ -112,9 +114,9 @@ public class ProductDB {
 
 			int rows = pstmt.executeUpdate();
 			if (rows > 0) {
-				System.out.println("商品情報を更新しました");
+				System.out.println("更新成功件数：" + rows + "件");
 			} else {
-				System.out.println("指定されたIDの商品が見つかりません");
+				System.out.println("更新失敗");
 			}
 
 		} catch (SQLException e) {
@@ -125,7 +127,7 @@ public class ProductDB {
 
 	private static void deleteProduct(Connection conn, Scanner sc) {
 
-		System.out.println("削除する商品カテゴリーIDを入力してください");
+		System.out.println("削除するカテゴリーIDを入力してください");
 		int categoryId = sc.nextInt();
 		sc.nextLine();
 
@@ -136,7 +138,8 @@ public class ProductDB {
 
 			int rows = pstmt.executeUpdate();
 			if (rows > 0) {
-				System.out.println(rows + "件の商品を削除しました");
+				System.out.println("削除成功件数：" + rows + "件");
+				System.out.println("カテゴリーID " + categoryId + " の商品を削除しました。");
 			} else {
 				System.out.println("指定されたカテゴリーIDの商品が見つかりません");
 			}
