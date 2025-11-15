@@ -3,7 +3,10 @@ package db;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class ProductDB {
@@ -24,6 +27,7 @@ public class ProductDB {
 							+ "1:商品の登録\n"
 							+ "2:商品の価格と在庫を更新\n"
 							+ "3:商品の削除（カテゴリーID指定）\n"
+							+ "4:複数商品の在庫更新\n"
 							+ "0:終了\n");
 					System.out.println("メニューから操作を選択してください");
 
@@ -36,6 +40,8 @@ public class ProductDB {
 						updateProduct(conn, sc);
 					} else if (choice == 3) {
 						deleteProduct(conn, sc);
+					} else if (choice == 4) {
+						updateMultipleProduct(conn, sc);
 					} else if (choice == 0) {
 						System.out.println("終了します");
 						break;
@@ -146,6 +152,117 @@ public class ProductDB {
 
 		} catch (SQLException e) {
 			System.out.println("商品削除中にエラーが発生しました");
+			e.printStackTrace();
+		}
+	}
+
+	private static void updateMultipleProduct(Connection conn, Scanner sc) {
+
+		Map<Integer, int[]> productMap = new LinkedHashMap<>();
+
+		System.out.println("複数の商品IDと新しい在庫数を入力してください");
+		System.out.println("入力を終える際は0と入力してください");
+
+		int count = 1;
+
+		while (true) {
+			System.out.println("--商品の価格と在庫を更新" + count + "--");
+
+			System.out.println("商品IDを入力してください");
+			int id = sc.nextInt();
+			if (id == 0)
+				break;
+
+			System.out.println("価格を入力してください");
+			int price = sc.nextInt();
+
+			System.out.println("在庫数を入力してください");
+			int stock = sc.nextInt();
+
+			if (price <= 0 || stock < 0) {
+				System.out.println("価格、または在庫数の入力が不正なため、再入力してください");
+				continue;
+			}
+
+			productMap.put(id, new int[] { price, stock });
+			count++;
+		}
+
+		if (productMap.isEmpty()) {
+			System.out.println("更新対象がありません");
+			return;
+		}
+
+		String sql = "UPDATE products SET price = ?, stock = ? WHERE id = ?";
+		String selectSql = "SELECT id, price, stock FROM products WHERE id = ?";
+
+		try {
+			conn.setAutoCommit(false);
+
+			try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+				int successCount = 0;
+				int totalCount = productMap.size();
+
+				for (Map.Entry<Integer, int[]> entry : productMap.entrySet()) {
+					int id = entry.getKey();
+					int price = entry.getValue()[0];
+					int stock = entry.getValue()[1];
+
+					pstmt.setInt(1, price);
+					pstmt.setInt(2, stock);
+					pstmt.setInt(3, id);
+
+					int rows = pstmt.executeUpdate();
+					if (rows == 0) {
+						System.out.println(totalCount + "件全ての更新に失敗しました。");
+						System.out.println("更新成功件数： " + successCount + "件");
+						System.out.println("ロールバックしました");
+						conn.rollback();
+						return;
+					}
+					successCount++;
+				}
+
+				conn.commit();
+				System.out.println("コミット成功");
+				sc.nextLine();
+				System.out.println("更新成功件数" + successCount + "件\n");
+
+				try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+					int updateCount = 1;
+					for (int id : productMap.keySet()) {
+						selectStmt.setInt(1, id);
+						try (ResultSet rs = selectStmt.executeQuery()) {
+							if (rs.next()) {
+								System.out.println("更新内容" + updateCount);
+								System.out.println(
+										"商品ID： " + rs.getInt("id") +
+												", 価格： " + rs.getInt("price") +
+												", 在庫： " + rs.getInt("stock"));
+							} else {
+								System.out.println("商品ID：" + id + " は存在しません。");
+							}
+						}
+						updateCount++;
+					}
+				}
+
+			} catch (SQLException e) {
+				System.out.println("商品更新中にエラーが発生しました。ロールバックします");
+				conn.rollback();
+				e.printStackTrace();
+			} finally {
+				try {
+					conn.setAutoCommit(true);
+				} catch (SQLException e) {
+					System.out.println("自動コミット中にエラーが発生しました");
+					e.printStackTrace();
+				}
+			}
+
+		} catch (SQLException e) {
+			System.out.println("トランザクション処理中にエラーが発生しました");
 			e.printStackTrace();
 		}
 	}
